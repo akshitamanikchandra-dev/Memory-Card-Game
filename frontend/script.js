@@ -1,7 +1,5 @@
-// Replace the URL below with your deployed Render backend web service URL.
-const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? ''
-  : 'https://memory-card-game-backend.onrender.com';
+// Connect relatively to the same domain (works both locally and on Render)
+const BACKEND_URL = '';
 const socket = io(BACKEND_URL);
 
 const localProfileKey = 'memory-card-profile';
