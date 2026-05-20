@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+// Triggering Render redeploy to pull updated frontend script changes
 const express = require('express');
 const http = require('http');
 const path = require('path');
