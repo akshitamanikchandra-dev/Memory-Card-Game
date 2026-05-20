@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Card Game</title>
+    <link rel="icon" type="image/x-icon" href="https://cdn.creazilla.com/cliparts/10000136049/e352e025-4fa1-4a4e-91d7-aeb546891a24-sm.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-shell">
+        <section class="screen active" id="profileScreen">
+            <div class="hero-panel">
+                <img src="https://cdn.creazilla.com/cliparts/10000136049/e352e025-4fa1-4a4e-91d7-aeb546891a24-sm.png" alt="logo" class="logo">
+                <h1>Memory Card Game</h1>
+                <p>Choose your name and avatar to start</p>
+
+                <div class="profile-form">
+                    <label class="field">
+                        <span>Username</span>
+                        <input id="usernameInput" type="text" placeholder="Your name..." maxlength="24">
+                    </label>
+
+                    <label class="field" style="margin-top: 20px;">
+                        <span>Choose Avatar</span>
+                        <div class="avatar-picker" id="avatarPicker">
+                            <button type="button" class="avatar-option active" data-avatar="adventurer-1">
+                                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Felix" alt="Avatar">
+                            </button>
+                            <button type="button" class="avatar-option" data-avatar="adventurer-2">
+                                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Aria" alt="Avatar">
+                            </button>
+                            <button type="button" class="avatar-option" data-avatar="adventurer-3">
+                                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Jack" alt="Avatar">
+                            </button>
+                            <button type="button" class="avatar-option" data-avatar="adventurer-4">
+                                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Milo" alt="Avatar">
+                            </button>
+                            <button type="button" class="avatar-option" data-avatar="adventurer-5">
+                                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Luna" alt="Avatar">
+                            </button>
+                            <button type="button" class="avatar-option" data-avatar="notion-1">
+                                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Jasper" alt="Avatar">
+                            </button>
+                            <button type="button" class="avatar-option" data-avatar="notion-2">
+                                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Sasha" alt="Avatar">
+                            </button>
+                            <button type="button" class="avatar-option" data-avatar="bot-1">
+                                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=B1" alt="Avatar">
+                            </button>
+                            <button type="button" class="avatar-option" data-avatar="bot-2">
+                                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=B2" alt="Avatar">
+                            </button>
+                            <button type="button" class="avatar-option" data-avatar="fun-1">
+                                <img src="https://api.dicebear.com/7.x/fun-emoji/svg?seed=F1" alt="Avatar">
+                            </button>
+                        </div>
+                    </label>
+
+                    <button id="saveProfileBtn" class="btn btn-primary btn-block" style="width: 100%; margin-top: 20px;">Play!</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="screen" id="lobbyScreen">
+            <div class="lobby-panel">
+                <div class="lobby-header">
+                    <div class="profile-chip" id="savedProfileChip"></div>
+                    <button id="editProfileBtn" class="btn btn-secondary btn-sm">Edit</button>
+                </div>
+                
+                <div class="lobby-actions">
+                    <div class="action-card">
+                        <h3>Host Game</h3>
+                        <p>Create a room and invite friends.</p>
+                        <button id="createRoomBtn" class="btn btn-primary btn-block" style="width: 100%;">Create Room</button>
+                    </div>
+                    <div class="action-card">
+                        <h3>Join Game</h3>
+                        <p>Join a room using an ID.</p>
+                        <button id="joinRoomToggleBtn" class="btn btn-secondary btn-block" style="width: 100%;">Join Room</button>
+                    </div>
+                </div>
+
+                <div class="join-box hidden" id="joinBox">
+                    <label class="field">
+                        <span>Room ID</span>
+                        <input id="roomIdInput" type="text" placeholder="Enter room ID...">
+                    </label>
+                    <button id="joinRoomBtn" class="btn btn-primary btn-block" style="width: 100%; margin-top: 10px;">Connect</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="screen" id="roomScreen">
+            <header class="topbar">
+                <div class="logo-area">
+                    <img src="https://cdn.creazilla.com/cliparts/10000136049/e352e025-4fa1-4a4e-91d7-aeb546891a24-sm.png" alt="logo" class="logo">
+                    <div class="room-info">
+                        <h2 id="roomIdLabel">------</h2>
+                        <span id="roomModeLabel" class="badge">Lobby</span>
+                        <span class="badge"><span id="roomPlayersLabel">0</span> Players</span>
+                    </div>
+                </div>
+                <div class="room-controls">
+                    <button id="copyRoomBtn" class="btn btn-secondary btn-sm">Copy ID</button>
+                    <button id="startMatchBtn" class="btn btn-primary btn-sm hidden">Start Game</button>
+                    <button id="leaveRoomBtn" class="btn btn-danger btn-sm">Leave</button>
+                </div>
+            </header>
+
+            <div class="room-layout">
+                <aside class="side-panel players-side">
+                    <h3>Players</h3>
+                    <div class="players-panel" id="playersPanel"></div>
+                </aside>
+
+                <main class="game-main">
+                    <section id="hostSettings" class="panel host-settings-panel hidden">
+                        <h3>Game Settings</h3>
+                        <div class="settings-grid">
+                            <label class="field">
+                                <span>Difficulty</span>
+                                <select id="difficulty">
+                                    <option value="easy">Easy (4x4)</option>
+                                    <option value="medium" selected>Medium (4x5)</option>
+                                    <option value="hard">Hard (5x6)</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Theme</span>
+                                <select id="theme">
+                                    <option value="emojis">Emoji</option>
+                                    <option value="animals">Animals</option>
+                                    <option value="fruits">Fruits</option>
+                                    <option value="objects">Objects</option>
+                                </select>
+                            </label>
+                        </div>
+                    </section>
+
+                    <div class="game-container">
+                        <div class="game-stats">
+                            <div class="stat-bubble">
+                                <span class="label">Time</span>
+                                <span id="timer" class="value">00:00</span>
+                            </div>
+                            <div class="status-msg" id="statusLabel">Waiting for host...</div>
+                            <div class="stat-bubble">
+                                <span class="label">Moves</span>
+                                <span id="moves" class="value">0</span>
+                            </div>
+                        </div>
+                        <div class="game-board-wrapper">
+                            <main class="game-board hidden" id="gameBoard"></main>
+                        </div>
+                    </div>
+                </main>
+
+                <aside class="side-panel chat-side">
+                    <h3>Chat</h3>
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <form class="chat-input-area" id="chatForm">
+                        <input type="text" id="chatInput" placeholder="Type a message..." maxlength="200" autocomplete="off">
+                        <button type="submit" class="btn-icon">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        </button>
+                    </form>
+                </aside>
+            </div>
+        </section>
+
+        <div class="modal hidden" id="resultModal">
+            <div class="modal-content result-card">
+                <h2 id="resultTitle">Game Over</h2>
+                <p id="resultMessage"></p>
+                <div class="results">
+                    <p><strong>Room ID:</strong> <span id="finalRoomId">-</span></p>
+                    <p><strong>Winner:</strong> <span id="winnerText">-</span></p>
+                    <p><strong>Your Score:</strong> <span id="yourScoreText">0</span></p>
+                </div>
+                <div class="modal-buttons">
+                    <button id="backToLobbyBtn" class="btn btn-primary">Back to Lobby</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
