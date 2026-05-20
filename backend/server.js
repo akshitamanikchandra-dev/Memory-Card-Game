@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-// Triggering Render redeploy to pull updated frontend script changes (optimistic card flipping)
+// Triggering Render redeploy to pull updated frontend script changes (optimistic card flipping & timer fixes)
 const express = require('express');
 const http = require('http');
 const path = require('path');

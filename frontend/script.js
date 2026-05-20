@@ -55,7 +55,8 @@ const appState = {
   selectedRoomId: localStorage.getItem(localRoomKey) || '',
   boardLocked: false,
   timerInterval: null,
-  seconds: 0
+  seconds: 0,
+  lastStatus: null
 };
 
 if (appState.profile) {
@@ -110,7 +111,12 @@ function startTimer() {
 }
 
 function stopTimer() {
-  if (appState.timerInterval) { clearInterval(appState.timerInterval); appState.timerInterval = null; }
+  if (appState.timerInterval) { 
+    clearInterval(appState.timerInterval); 
+    appState.timerInterval = null; 
+  }
+  appState.seconds = 0;
+  updateTimerDisplay();
 }
 
 function renderPlayers(room) {
@@ -194,6 +200,14 @@ function renderBoard(room) {
 }
 
 function refreshRoomView(room) {
+  // Clear chat if room changed or status changed
+  const statusChanged = appState.lastStatus && appState.lastStatus !== room.status;
+  const roomChanged = !appState.room || appState.room.roomId !== room.roomId;
+  if (roomChanged || statusChanged) {
+    elements.chatMessages.innerHTML = '';
+  }
+  appState.lastStatus = room.status;
+
   appState.room = room;
   localStorage.setItem(localRoomKey, room.roomId);
   
@@ -209,9 +223,11 @@ function refreshRoomView(room) {
     renderBoard(room);
     if (!appState.timerInterval) startTimer();
     elements.statusLabel.textContent = room.currentTurnClientId === appState.clientId ? 'Your turn!' : 'Opponent turn...';
+    elements.moves.textContent = room.players.reduce((sum, p) => sum + p.score, 0);
   } else {
     elements.gameBoard.classList.add('hidden');
     stopTimer();
+    elements.moves.textContent = '0';
     if (room.status === 'lobby') {
       elements.statusLabel.textContent = isHost ? 'Setup your game...' : 'Waiting for host...';
     } else {
