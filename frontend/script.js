@@ -145,20 +145,52 @@ function appendChatMessage(msg) {
 function renderBoard(room) {
   const gridClass = room.difficulty === 'hard' ? 'grid-5x6' : room.difficulty === 'easy' ? 'grid-4x4' : 'grid-4x5';
   elements.gameBoard.className = `game-board ${gridClass}`;
-  elements.gameBoard.innerHTML = '';
-  room.board.forEach((card, i) => {
-    const cardEl = document.createElement('button');
-    cardEl.className = 'card';
-    if (card.revealed || card.matched) {
-      cardEl.classList.add('flipped');
-      cardEl.textContent = card.value;
-    }
-    if (card.matched) {
-      cardEl.classList.add('matched');
-    }
-    cardEl.addEventListener('click', () => flipCard(i));
-    elements.gameBoard.appendChild(cardEl);
-  });
+  
+  const existingCards = elements.gameBoard.querySelectorAll('.card');
+  
+  // If the board layout changed or is empty, rebuild the DOM elements
+  if (existingCards.length !== room.board.length) {
+    elements.gameBoard.innerHTML = '';
+    room.board.forEach((card, i) => {
+      const cardEl = document.createElement('button');
+      cardEl.className = 'card';
+      if (card.revealed || card.matched) {
+        cardEl.classList.add('flipped');
+        cardEl.textContent = card.value;
+      }
+      if (card.matched) {
+        cardEl.classList.add('matched');
+      }
+      cardEl.addEventListener('click', () => flipCard(i));
+      elements.gameBoard.appendChild(cardEl);
+    });
+  } else {
+    // Update existing elements in place to preserve CSS transition animations
+    room.board.forEach((card, i) => {
+      const cardEl = existingCards[i];
+      if (!cardEl) return;
+      
+      const isFlipped = card.revealed || card.matched;
+      if (isFlipped) {
+        cardEl.classList.add('flipped');
+        cardEl.textContent = card.value;
+      } else {
+        cardEl.classList.remove('flipped');
+        // Clear text after flip transition ends (300ms) to avoid text vanishing mid-rotation
+        setTimeout(() => {
+          if (!cardEl.classList.contains('flipped')) {
+            cardEl.textContent = '';
+          }
+        }, 300);
+      }
+      
+      if (card.matched) {
+        cardEl.classList.add('matched');
+      } else {
+        cardEl.classList.remove('matched');
+      }
+    });
+  }
 }
 
 function refreshRoomView(room) {
@@ -317,6 +349,18 @@ async function joinRoom() {
 
 async function flipCard(i) {
   if (appState.boardLocked || appState.room?.currentTurnClientId !== appState.clientId) return;
+  
+  // Optimistically flip the card locally for instant visual response
+  const cards = elements.gameBoard.querySelectorAll('.card');
+  const cardEl = cards[i];
+  if (cardEl && !cardEl.classList.contains('flipped')) {
+    cardEl.classList.add('flipped');
+    const cardData = appState.room?.board[i];
+    if (cardData) {
+      cardEl.textContent = cardData.value;
+    }
+  }
+
   appState.boardLocked = true;
   try { await emitWithAck('game:flip', { roomId: appState.room.roomId, clientId: appState.clientId, index: i }); }
   finally { appState.boardLocked = false; }
