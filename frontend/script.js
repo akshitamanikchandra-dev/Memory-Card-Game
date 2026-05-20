@@ -224,6 +224,8 @@ function refreshRoomView(room) {
     if (!appState.timerInterval) startTimer();
     elements.statusLabel.textContent = room.currentTurnClientId === appState.clientId ? 'Your turn!' : 'Opponent turn...';
     elements.moves.textContent = room.players.reduce((sum, p) => sum + p.score, 0);
+    // Ensure the room screen remains visible for all participants
+    showScreen(elements.roomScreen);
   } else {
     elements.gameBoard.classList.add('hidden');
     stopTimer();
