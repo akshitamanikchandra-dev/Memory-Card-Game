@@ -1,6 +1,6 @@
 # Multiplayer Memory Card Game
 
-A real-time multiplayer Memory Card game featuring customizable avatars, themes, difficulty levels, and a Skribbl-like UI layout with integrated live chat and system notifications.
+A real-time multiplayer Memory Card game featuring customizable avatars, themes, difficulty levels, and a UI layout with integrated live chat and system notifications.
 
 ---
 
