@@ -69,6 +69,7 @@ function buildPublicRoom(room) {
     roomId: room.roomId,
     hostClientId: room.hostClientId,
     status: room.status,
+    gameMode: room.gameMode,
     difficulty: room.difficulty,
     theme: room.theme,
     board: room.board,
@@ -197,7 +198,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('room:create', async ({ clientId, username, avatar, difficulty, theme }, callback) => {
+  socket.on('room:create', async ({ clientId, username, avatar, difficulty, theme, gameMode }, callback) => {
     try {
       await upsertUser(clientId, username, avatar);
       const roomId = Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -205,6 +206,7 @@ io.on('connection', (socket) => {
         roomId,
         hostClientId: clientId,
         status: 'lobby',
+        gameMode: gameMode || 'classic',
         difficulty,
         theme,
         board: createBoard(theme, difficulty),
@@ -285,17 +287,23 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('room:settings', async ({ roomId, difficulty, theme }) => {
+  socket.on('room:settings', async ({ roomId, difficulty, theme, gameMode }) => {
     try {
       const room = await Room.findOne({ roomId });
       if (!room || room.status !== 'lobby') return;
+      const previousGameMode = room.gameMode || 'classic';
       
       room.difficulty = difficulty;
       room.theme = theme;
+      room.gameMode = gameMode || room.gameMode;
       room.board = createBoard(theme, difficulty);
       await room.save();
       
       await broadcastRoom(roomId);
+      if (room.gameMode !== previousGameMode) {
+        const modeLabel = room.gameMode === 'time-attack' ? 'Time Attack' : 'Classic';
+        broadcastSystemMessage(roomId, `Game mode switched to ${modeLabel}. Everyone in the room can see the new instructions.`);
+      }
     } catch (error) {
       console.error('Error updating settings:', error);
     }
@@ -303,19 +311,21 @@ io.on('connection', (socket) => {
 
   socket.on('room:start', async ({ roomId, clientId }, callback) => {
     try {
+      const activeClientId = clientId || socket.clientId;
       const room = await Room.findOne({ roomId: String(roomId || '').trim().toUpperCase() });
       if (!room) {
         callback?.({ ok: false, error: 'Room not found' });
         return;
       }
 
-      if (room.hostClientId !== clientId) {
+      if (room.hostClientId !== activeClientId) {
         callback?.({ ok: false, error: 'Only the host can start the game' });
         return;
       }
 
       room.status = 'playing';
-      room.currentTurnClientId = room.players[0]?.clientId || clientId;
+      // Only set turn in classic mode
+      room.currentTurnClientId = room.gameMode === 'classic' ? (room.players[0]?.clientId || clientId) : null;
       room.flippedIndices = [];
       room.locked = false;
       room.board = createBoard(room.theme, room.difficulty);
@@ -326,7 +336,11 @@ io.on('connection', (socket) => {
       socket.join(room.roomId);
       callback?.({ ok: true, room: buildPublicRoom(room.toObject()) });
       await broadcastRoom(room.roomId);
-      broadcastSystemMessage(room.roomId, `Game started! It's ${room.players[0].username}'s turn`);
+      
+      const startMsg = room.gameMode === 'time-attack' 
+        ? "Time Attack started! Find all matches as fast as possible!" 
+        : `Game started! It's ${room.players[0].username}'s turn`;
+      broadcastSystemMessage(room.roomId, startMsg);
     } catch (error) {
       callback?.({ ok: false, error: error.message });
     }
@@ -346,7 +360,8 @@ io.on('connection', (socket) => {
         return;
       }
 
-      if (room.currentTurnClientId !== clientId) {
+      // Only check turn in classic mode
+      if (room.gameMode === 'classic' && room.currentTurnClientId !== clientId) {
         callback?.({ ok: false, error: 'Not your turn' });
         return;
       }
@@ -389,10 +404,13 @@ io.on('connection', (socket) => {
           } else {
             if (firstCard) firstCard.revealed = false;
             if (secondCard) secondCard.revealed = false;
-            setNextTurn(latestRoom);
-            const nextPlayer = latestRoom.players.find(p => p.clientId === latestRoom.currentTurnClientId);
-            if (nextPlayer) {
-                broadcastSystemMessage(latestRoom.roomId, `No match! It's now ${nextPlayer.username}'s turn`);
+            
+            if (latestRoom.gameMode === 'classic') {
+              setNextTurn(latestRoom);
+              const nextPlayer = latestRoom.players.find(p => p.clientId === latestRoom.currentTurnClientId);
+              if (nextPlayer) {
+                  broadcastSystemMessage(latestRoom.roomId, `No match! It's now ${nextPlayer.username}'s turn`);
+              }
             }
           }
 

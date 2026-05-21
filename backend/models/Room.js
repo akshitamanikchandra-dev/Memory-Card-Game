@@ -25,6 +25,7 @@ const roomSchema = new mongoose.Schema(
     roomId: { type: String, required: true, unique: true },
     hostClientId: { type: String, required: true },
     status: { type: String, enum: ['lobby', 'playing', 'finished'], default: 'lobby' },
+    gameMode: { type: String, enum: ['classic', 'time-attack'], default: 'classic' },
     difficulty: { type: String, required: true },
     theme: { type: String, required: true },
     board: { type: [cardSchema], default: [] },

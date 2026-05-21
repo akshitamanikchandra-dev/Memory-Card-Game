@@ -14,6 +14,7 @@ const elements = {
   avatarPicker: document.getElementById('avatarPicker'),
   saveProfileBtn: document.getElementById('saveProfileBtn'),
   savedProfileChip: document.getElementById('savedProfileChip'),
+  editProfileBtn: document.getElementById('editProfileBtn'),
   createRoomBtn: document.getElementById('createRoomBtn'),
   joinRoomToggleBtn: document.getElementById('joinRoomToggleBtn'),
   joinBox: document.getElementById('joinBox'),
@@ -22,13 +23,14 @@ const elements = {
   hostSettings: document.getElementById('hostSettings'),
   difficultySelect: document.getElementById('difficulty'),
   themeSelect: document.getElementById('theme'),
+  gameModeSelect: document.getElementById('gameMode'),
   roomIdLabel: document.getElementById('roomIdLabel'),
   copyRoomBtn: document.getElementById('copyRoomBtn'),
   startMatchBtn: document.getElementById('startMatchBtn'),
   leaveRoomBtn: document.getElementById('leaveRoomBtn'),
   roomModeLabel: document.getElementById('roomModeLabel'),
+  gameModeLabel: document.getElementById('gameModeLabel'),
   roomPlayersLabel: document.getElementById('roomPlayersLabel'),
-  turnLabel: document.getElementById('turnLabel'),
   playersPanel: document.getElementById('playersPanel'),
   gameBoard: document.getElementById('gameBoard'),
   moves: document.getElementById('moves'),
@@ -41,10 +43,11 @@ const elements = {
   winnerText: document.getElementById('winnerText'),
   yourScoreText: document.getElementById('yourScoreText'),
   backToLobbyBtn: document.getElementById('backToLobbyBtn'),
-  // New elements for Skribbl-like UI
   chatMessages: document.getElementById('chatMessages'),
   chatForm: document.getElementById('chatForm'),
-  chatInput: document.getElementById('chatInput')
+  chatInput: document.getElementById('chatInput'),
+  themeCheckbox: document.getElementById('themeCheckbox'),
+  themeIcon: document.getElementById('themeIcon')
 };
 
 const appState = {
@@ -56,8 +59,16 @@ const appState = {
   boardLocked: false,
   timerInterval: null,
   seconds: 0,
-  lastStatus: null
+  lastStatus: null,
+  theme: localStorage.getItem('theme') || 'dark'
 };
+
+// Apply theme on load
+document.body.setAttribute('data-theme', appState.theme);
+if (elements.themeCheckbox) {
+  elements.themeCheckbox.checked = appState.theme === 'dark';
+  elements.themeIcon.textContent = appState.theme === 'dark' ? '🌙' : '☀️';
+}
 
 if (appState.profile) {
   appState.selectedAvatar = appState.profile.avatar;
@@ -79,18 +90,18 @@ function syncProfileChip() {
 
 function getAvatarUrl(avatarId) {
   const avatars = {
-    'adventurer-1': 'https://api.dicebear.com/7.x/adventurer/svg?seed=Felix',
-    'adventurer-2': 'https://api.dicebear.com/7.x/adventurer/svg?seed=Aria',
-    'adventurer-3': 'https://api.dicebear.com/7.x/adventurer/svg?seed=Jack',
-    'adventurer-4': 'https://api.dicebear.com/7.x/adventurer/svg?seed=Milo',
-    'adventurer-5': 'https://api.dicebear.com/7.x/adventurer/svg?seed=Luna',
-    'notion-1': 'https://api.dicebear.com/7.x/notionists/svg?seed=Jasper',
-    'notion-2': 'https://api.dicebear.com/7.x/notionists/svg?seed=Sasha',
-    'bot-1': 'https://api.dicebear.com/7.x/bottts/svg?seed=B1',
-    'bot-2': 'https://api.dicebear.com/7.x/bottts/svg?seed=B2',
-    'fun-1': 'https://api.dicebear.com/7.x/fun-emoji/svg?seed=F1'
+    'adventurer-1': 'https://api.dicebear.com/7.x/big-smile/svg?seed=Felix',
+    'adventurer-2': 'https://api.dicebear.com/7.x/big-smile/svg?seed=Aria',
+    'adventurer-3': 'https://api.dicebear.com/7.x/big-smile/svg?seed=Jack',
+    'adventurer-4': 'https://api.dicebear.com/7.x/big-smile/svg?seed=Milo',
+    'adventurer-5': 'https://api.dicebear.com/7.x/big-smile/svg?seed=Luna',
+    'notion-1': 'https://api.dicebear.com/7.x/lorelei/svg?seed=Jasper',
+    'notion-2': 'https://api.dicebear.com/7.x/lorelei/svg?seed=Sasha',
+    'bot-1': 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=B1',
+    'bot-2': 'https://api.dicebear.com/7.x/bottts-neutral/svg?seed=B2',
+    'fun-1': 'https://api.dicebear.com/7.x/avataaars/svg?seed=F1'
   };
-  return avatars[avatarId] || `https://api.dicebear.com/7.x/adventurer/svg?seed=${avatarId}`;
+  return avatars[avatarId] || `https://api.dicebear.com/7.x/big-smile/svg?seed=${avatarId}`;
 }
 
 function normalizeUsername(value) { return String(value || '').trim().slice(0, 24); }
@@ -104,6 +115,8 @@ function updateTimerDisplay() {
 
 function startTimer() {
   stopTimer();
+  appState.seconds = 0;
+  updateTimerDisplay();
   appState.timerInterval = window.setInterval(() => {
     appState.seconds += 1;
     updateTimerDisplay();
@@ -111,9 +124,9 @@ function startTimer() {
 }
 
 function stopTimer() {
-  if (appState.timerInterval) { 
-    clearInterval(appState.timerInterval); 
-    appState.timerInterval = null; 
+  if (appState.timerInterval) {
+    clearInterval(appState.timerInterval);
+    appState.timerInterval = null;
   }
   appState.seconds = 0;
   updateTimerDisplay();
@@ -151,18 +164,32 @@ function appendChatMessage(msg) {
 function renderBoard(room) {
   const gridClass = room.difficulty === 'hard' ? 'grid-5x6' : room.difficulty === 'easy' ? 'grid-4x4' : 'grid-4x5';
   elements.gameBoard.className = `game-board ${gridClass}`;
-  
+
   const existingCards = elements.gameBoard.querySelectorAll('.card');
-  
-  // If the board layout changed or is empty, rebuild the DOM elements
+
   if (existingCards.length !== room.board.length) {
     elements.gameBoard.innerHTML = '';
     room.board.forEach((card, i) => {
       const cardEl = document.createElement('button');
       cardEl.className = 'card';
+
+      const inner = document.createElement('div');
+      inner.className = 'card-inner';
+
+      const back = document.createElement('div');
+      back.className = 'card-back';
+      back.textContent = '?';
+
+      const front = document.createElement('div');
+      front.className = 'card-front';
+
+      inner.appendChild(back);
+      inner.appendChild(front);
+      cardEl.appendChild(inner);
+
       if (card.revealed || card.matched) {
         cardEl.classList.add('flipped');
-        cardEl.textContent = card.value;
+        front.textContent = card.value;
       }
       if (card.matched) {
         cardEl.classList.add('matched');
@@ -171,25 +198,24 @@ function renderBoard(room) {
       elements.gameBoard.appendChild(cardEl);
     });
   } else {
-    // Update existing elements in place to preserve CSS transition animations
     room.board.forEach((card, i) => {
       const cardEl = existingCards[i];
       if (!cardEl) return;
-      
+      const front = cardEl.querySelector('.card-front');
+
       const isFlipped = card.revealed || card.matched;
       if (isFlipped) {
         cardEl.classList.add('flipped');
-        cardEl.textContent = card.value;
+        front.textContent = card.value;
       } else {
         cardEl.classList.remove('flipped');
-        // Clear text after flip transition ends (300ms) to avoid text vanishing mid-rotation
         setTimeout(() => {
           if (!cardEl.classList.contains('flipped')) {
-            cardEl.textContent = '';
+            front.textContent = '';
           }
-        }, 300);
+        }, 350);
       }
-      
+
       if (card.matched) {
         cardEl.classList.add('matched');
       } else {
@@ -210,19 +236,31 @@ function refreshRoomView(room) {
 
   appState.room = room;
   localStorage.setItem(localRoomKey, room.roomId);
-  
+
   const isHost = String(room.hostClientId) === String(appState.clientId);
-  
+
   elements.roomIdLabel.textContent = room.roomId;
   elements.roomModeLabel.textContent = room.status.toUpperCase();
+  if (elements.gameModeLabel) {
+    elements.gameModeLabel.textContent = room.gameMode === 'time-attack' ? 'Time Attack' : 'Classic';
+  }
   elements.roomPlayersLabel.textContent = room.players.length;
   renderPlayers(room);
+
+  // Show/hide host settings and start button
+  if (isHost && room.status === 'lobby') {
+    elements.hostSettings.classList.remove('hidden');
+    elements.startMatchBtn.classList.remove('hidden');
+  } else {
+    elements.hostSettings.classList.add('hidden');
+    elements.startMatchBtn.classList.add('hidden');
+  }
 
   if (room.status === 'playing') {
     elements.gameBoard.classList.remove('hidden');
     renderBoard(room);
     if (!appState.timerInterval) startTimer();
-    elements.statusLabel.textContent = room.currentTurnClientId === appState.clientId ? 'Your turn!' : 'Opponent turn...';
+    elements.statusLabel.textContent = room.currentTurnClientId === appState.clientId ? '✨ Your turn!' : '⏳ Opponent\'s turn...';
     elements.moves.textContent = room.players.reduce((sum, p) => sum + p.score, 0);
     // Ensure the room screen remains visible for all participants
     showScreen(elements.roomScreen);
@@ -231,23 +269,16 @@ function refreshRoomView(room) {
     stopTimer();
     elements.moves.textContent = '0';
     if (room.status === 'lobby') {
-      elements.statusLabel.textContent = isHost ? 'Setup your game...' : 'Waiting for host...';
-    } else {
-      elements.statusLabel.textContent = 'Game Over';
+      elements.statusLabel.textContent = isHost ? '⚙️ Setup your game...' : '⏳ Waiting for host...';
+      if (elements.gameModeSelect) elements.gameModeSelect.value = room.gameMode || 'classic';
     }
   }
 
-  elements.startMatchBtn.classList.toggle('hidden', !isHost || room.status !== 'lobby');
-
-  // Show host settings only to host when in lobby
-  if (elements.hostSettings) {
-    elements.hostSettings.classList.toggle('hidden', !isHost || room.status !== 'lobby');
-  }
-
-  // Update dropdowns if host
+  // Update dropdowns if host and in lobby
   if (isHost && room.status === 'lobby') {
     elements.difficultySelect.value = room.difficulty;
     elements.themeSelect.value = room.theme;
+    if (elements.gameModeSelect) elements.gameModeSelect.value = room.gameMode || 'classic';
   }
 
   if (room.status === 'finished') showResult(room);
@@ -257,9 +288,10 @@ function showResult(room) {
   const max = Math.max(...room.players.map(p => p.score));
   const winners = room.players.filter(p => p.score === max).map(p => {
     const avatarUrl = getAvatarUrl(p.avatar);
-    return `<img src="${avatarUrl}" style="width:20px; vertical-align:middle; border-radius:50%;"> ${p.username}`;
+    return `<img src="${avatarUrl}" style="width:24px; vertical-align:middle; border-radius:50%; margin-right:5px;"> ${p.username}`;
   }).join(', ');
   elements.resultModal.classList.remove('hidden');
+  elements.resultTitle.textContent = room.gameMode === 'time-attack' ? '⏱️ Time Attack Complete!' : '🏆 Game Over';
   elements.winnerText.innerHTML = winners;
   elements.finalRoomId.textContent = room.roomId;
   elements.yourScoreText.textContent = room.players.find(p => p.clientId === appState.clientId)?.score || 0;
@@ -286,30 +318,21 @@ async function saveProfile() {
     showScreen(elements.lobbyScreen);
   } catch (err) {
     console.error('Failed to save profile:', err);
-    // Fallback if server is slow/offline for a moment
     syncProfileChip();
     showScreen(elements.lobbyScreen);
   }
 }
 
-// Avatar selection logic
 function setupAvatarPicker() {
   elements.avatarPicker.addEventListener('click', (e) => {
     const btn = e.target.closest('.avatar-option');
     if (!btn) return;
-    
-    // Remove active class from all
     elements.avatarPicker.querySelectorAll('.avatar-option').forEach(opt => opt.classList.remove('active'));
-    
-    // Add active class to clicked
     btn.classList.add('active');
     appState.selectedAvatar = btn.getAttribute('data-avatar');
-    console.log('Selected avatar:', appState.selectedAvatar);
   });
 }
-setupAvatarPicker();
 
-// Update selections on load
 function initAvatarPicker() {
   if (appState.profile) {
     appState.selectedAvatar = appState.profile.avatar;
@@ -320,62 +343,59 @@ function initAvatarPicker() {
     }
   }
 }
-initAvatarPicker();
 
 async function createRoom() {
-  const r = await emitWithAck('room:create', { 
-    ...appState.profile, 
-    clientId: appState.clientId, 
-    difficulty: 'medium', 
-    theme: 'emojis' 
-  });
-  refreshRoomView(r.room);
-  showScreen(elements.roomScreen);
+  try {
+    const res = await emitWithAck('room:create', {
+      clientId: appState.clientId,
+      username: appState.profile.username,
+      avatar: appState.profile.avatar,
+      difficulty: elements.difficultySelect.value,
+      theme: elements.themeSelect.value,
+      gameMode: elements.gameModeSelect.value
+    });
+    refreshRoomView(res.room);
+    showScreen(elements.roomScreen);
+  } catch (err) { alert(err.message); }
 }
 
-// Update room settings (host only)
-const updateRoomSettings = () => {
+async function joinRoom() {
+  const roomId = elements.roomIdInput.value.trim().toUpperCase();
+  if (!roomId) return alert('Enter a Room ID');
+  try {
+    const res = await emitWithAck('room:join', {
+      clientId: appState.clientId,
+      username: appState.profile.username,
+      avatar: appState.profile.avatar,
+      roomId
+    });
+    refreshRoomView(res.room);
+    showScreen(elements.roomScreen);
+  } catch (err) { alert(err.message); }
+}
+
+function updateRoomSettings() {
   if (!appState.room || appState.room.hostClientId !== appState.clientId) return;
   socket.emit('room:settings', {
     roomId: appState.room.roomId,
     difficulty: elements.difficultySelect.value,
-    theme: elements.themeSelect.value
+    theme: elements.themeSelect.value,
+    gameMode: elements.gameModeSelect.value
   });
-};
-
-// Chat events
-elements.chatForm?.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const text = elements.chatInput.value.trim();
-  if (!text || !appState.room) return;
-  socket.emit('chat:message', { roomId: appState.room.roomId, clientId: appState.clientId, text });
-  elements.chatInput.value = '';
-});
-
-socket.on('chat:message', appendChatMessage);
-
-elements.difficultySelect.addEventListener('change', updateRoomSettings);
-elements.themeSelect.addEventListener('change', updateRoomSettings);
-
-async function joinRoom() {
-  const id = elements.roomIdInput.value.trim().toUpperCase();
-  if (!id) return;
-  const r = await emitWithAck('room:join', { ...appState.profile, clientId: appState.clientId, roomId: id });
-  refreshRoomView(r.room);
-  showScreen(elements.roomScreen);
 }
 
 async function flipCard(i) {
-  if (appState.boardLocked || appState.room?.currentTurnClientId !== appState.clientId) return;
-  
-  // Optimistically flip the card locally for instant visual response
+  if (appState.boardLocked) return;
+  if (appState.room?.gameMode === 'classic' && appState.room?.currentTurnClientId !== appState.clientId) return;
+
   const cards = elements.gameBoard.querySelectorAll('.card');
   const cardEl = cards[i];
   if (cardEl && !cardEl.classList.contains('flipped')) {
     cardEl.classList.add('flipped');
     const cardData = appState.room?.board[i];
     if (cardData) {
-      cardEl.textContent = cardData.value;
+      const front = cardEl.querySelector('.card-front');
+      if (front) front.textContent = cardData.value;
     }
   }
 
@@ -384,40 +404,87 @@ async function flipCard(i) {
   finally { appState.boardLocked = false; }
 }
 
-socket.on('room:update', refreshRoomView);
-socket.on('connect', () => {
-  if (appState.profile) {
-    showScreen(elements.lobbyScreen);
-    syncProfileChip();
-    emitWithAck('user:save', { clientId: appState.clientId, ...appState.profile });
-  }
-});
-
-elements.saveProfileBtn.addEventListener('click', saveProfile);
-elements.createRoomBtn.addEventListener('click', createRoom);
-elements.joinRoomToggleBtn.addEventListener('click', () => elements.joinBox.classList.toggle('hidden'));
-elements.joinRoomBtn.addEventListener('click', joinRoom);
-elements.startMatchBtn.addEventListener('click', () => emitWithAck('room:start', { roomId: appState.room.roomId, clientId: appState.clientId }));
-const editProfileBtn = document.getElementById('editProfileBtn');
-if (editProfileBtn) {
-  editProfileBtn.addEventListener('click', () => showScreen(elements.profileScreen));
+function toggleTheme() {
+  appState.theme = elements.themeCheckbox.checked ? 'dark' : 'light';
+  document.body.setAttribute('data-theme', appState.theme);
+  localStorage.setItem('theme', appState.theme);
+  elements.themeIcon.textContent = appState.theme === 'dark' ? '🌙' : '☀️';
 }
-elements.leaveRoomBtn.addEventListener('click', () => {
-  if (appState.room) {
-    socket.emit('room:leave', { roomId: appState.room.roomId, clientId: appState.clientId });
-  }
-  appState.room = null;
-  localStorage.removeItem(localRoomKey);
-  showScreen(elements.lobbyScreen);
-});
 
-elements.backToLobbyBtn.addEventListener('click', () => {
-  if (appState.room) {
-    socket.emit('room:leave', { roomId: appState.room.roomId, clientId: appState.clientId });
+function setupEventListeners() {
+  elements.saveProfileBtn.addEventListener('click', saveProfile);
+  elements.createRoomBtn.addEventListener('click', createRoom);
+  elements.joinRoomToggleBtn.addEventListener('click', () => elements.joinBox.classList.toggle('hidden'));
+  elements.joinRoomBtn.addEventListener('click', joinRoom);
+  elements.difficultySelect.addEventListener('change', updateRoomSettings);
+  elements.themeSelect.addEventListener('change', updateRoomSettings);
+  elements.gameModeSelect.addEventListener('change', updateRoomSettings);
+  elements.startMatchBtn.addEventListener('click', () => {
+    socket.emit('room:start', { roomId: appState.room.roomId, clientId: appState.clientId });
+  });
+  elements.leaveRoomBtn.addEventListener('click', () => {
+    if (appState.room) socket.emit('room:leave', { roomId: appState.room.roomId, clientId: appState.clientId });
+    appState.room = null;
+    appState.selectedRoomId = '';
+    localStorage.removeItem(localRoomKey);
+    showScreen(elements.lobbyScreen);
+  });
+  elements.copyRoomBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(appState.room?.roomId || '');
+    elements.copyRoomBtn.textContent = 'Copied!';
+    setTimeout(() => elements.copyRoomBtn.textContent = 'Copy ID', 2000);
+  });
+  elements.backToLobbyBtn.addEventListener('click', () => {
+    elements.resultModal.classList.add('hidden');
+    if (appState.room) {
+      socket.emit('room:leave', { roomId: appState.room.roomId, clientId: appState.clientId });
+    }
+    appState.room = null;
+    appState.selectedRoomId = '';
+    localStorage.removeItem(localRoomKey);
+    showScreen(elements.lobbyScreen);
+  });
+  elements.chatForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = elements.chatInput.value.trim();
+    if (text && appState.room) {
+      socket.emit('chat:message', { roomId: appState.room.roomId, clientId: appState.clientId, text });
+      elements.chatInput.value = '';
+    }
+  });
+  if (elements.editProfileBtn) {
+    elements.editProfileBtn.addEventListener('click', () => showScreen(elements.profileScreen));
   }
-  elements.resultModal.classList.add('hidden');
-  appState.room = null;
-  localStorage.removeItem(localRoomKey);
-  showScreen(elements.lobbyScreen);
+  elements.themeCheckbox.addEventListener('change', toggleTheme);
+  setupAvatarPicker();
+}
+
+// Reconnection logic and start
+async function init() {
+  syncProfileChip();
+  initAvatarPicker();
+  if (appState.profile) {
+    if (appState.selectedRoomId) {
+      try {
+        const res = await emitWithAck('room:join', { ...appState.profile, clientId: appState.clientId, roomId: appState.selectedRoomId });
+        refreshRoomView(res.room);
+        showScreen(elements.roomScreen);
+      } catch (e) {
+        showScreen(elements.lobbyScreen);
+      }
+    } else {
+      showScreen(elements.lobbyScreen);
+    }
+  } else {
+    showScreen(elements.profileScreen);
+  }
+  setupEventListeners();
+}
+
+init();
+
+socket.on('room:update', refreshRoomView);
+socket.on('chat:message', appendChatMessage);
+socket.on('connect', () => {
+  if (appState.profile) emitWithAck('user:save', { clientId: appState.clientId, ...appState.profile });
 });
-elements.copyRoomBtn.addEventListener('click', () => navigator.clipboard.writeText(appState.room.roomId));

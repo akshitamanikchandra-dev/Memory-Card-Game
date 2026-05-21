@@ -3,11 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory Card Game</title>
+    <meta name="description" content="A beautiful multiplayer memory card matching game with real-time chat, multiple themes, and difficulty levels.">
+    <title>Memory Card Game — Multiplayer</title>
     <link rel="icon" type="image/x-icon" href="https://cdn.creazilla.com/cliparts/10000136049/e352e025-4fa1-4a4e-91d7-aeb546891a24-sm.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="theme-toggle">
+        <label id="themeToggleLabel">
+            <input type="checkbox" id="themeCheckbox" hidden>
+            <span id="themeIcon">☀️</span>
+        </label>
+    </div>
     <div class="app-shell">
         <section class="screen active" id="profileScreen">
             <div class="hero-panel">
@@ -82,6 +92,16 @@
                     </div>
                 </div>
 
+                <section class="instructions-panel">
+                    <h3>How to Play</h3>
+                    <ul class="instructions-list">
+                        <li>Choose your avatar and save your profile before creating or joining a room.</li>
+                        <li>In Classic mode, only the active player can flip cards on their turn.</li>
+                        <li>In Time Attack mode, everyone can flip cards as fast as they can until the board is cleared.</li>
+                        <li>The selected mode, room updates, and system messages are shown to everyone in the room.</li>
+                    </ul>
+                </section>
+
                 <div class="join-box hidden" id="joinBox">
                     <label class="field">
                         <span>Room ID</span>
@@ -99,6 +119,7 @@
                     <div class="room-info">
                         <h2 id="roomIdLabel">------</h2>
                         <span id="roomModeLabel" class="badge">Lobby</span>
+                        <span id="gameModeLabel" class="badge badge-alt">Classic</span>
                         <span class="badge"><span id="roomPlayersLabel">0</span> Players</span>
                     </div>
                 </div>
@@ -120,6 +141,13 @@
                         <h3>Game Settings</h3>
                         <div class="settings-grid">
                             <label class="field">
+                                <span>Game Mode</span>
+                                <select id="gameMode">
+                                    <option value="classic" selected>Classic (Turns)</option>
+                                    <option value="time-attack">Time Attack (Solo/Co-op)</option>
+                                </select>
+                            </label>
+                            <label class="field">
                                 <span>Difficulty</span>
                                 <select id="difficulty">
                                     <option value="easy">Easy (4x4)</option>
@@ -136,6 +164,9 @@
                                     <option value="objects">Objects</option>
                                 </select>
                             </label>
+                        </div>
+                        <div class="settings-note">
+                            Changing the mode to Time Attack updates the room for everyone and posts a system message in chat.
                         </div>
                     </section>
 
